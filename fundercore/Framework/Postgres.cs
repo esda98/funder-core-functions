@@ -12,53 +12,170 @@ namespace fundercore.Framework
     public static class Postgres
     {
         private static PostgresSecret secret;
-        public static async Task<List<dynamic>> getAllRecordsFromColumnZero(string query, NpgsqlParameter[] parameters)
+
+        public static async Task<List<T>> getAll<T>(PgQuery prepQuery)
         {
-            var columnResults = new List<dynamic>();
+            var columnResults = new List<T>();
             //get secret info if not already generated
-            if (await warmConnection() == false) { return null; }
-            try
+            if (secret == null && await warmConnection() == false) { return null; }
+            using (var conn = new NpgsqlConnection(secret.generateConnectionString(1)))
             {
-                using (var conn = new NpgsqlConnection(secret.generateConnectionString()))
+                try
                 {
-                    Logger.write("about to open connection");
+                    //Console.WriteLine("about to open connection");
                     conn.Open();
-                    Logger.write("opened the connection");
-                    //once connected to the database, get all the tenants
-                    using (var cmd = new NpgsqlCommand(query, conn))
+                    //conn.TypeMapper.UseJsonNet();
+                    //Console.WriteLine("opened the connection");
+                    using (var cmd = new NpgsqlCommand(prepQuery.query, conn))
                     {
-                        foreach (var p in parameters)
+                        foreach (var p in prepQuery.parameters)
                             cmd.Parameters.Add(p);
                         cmd.Prepare();
                         //go through all records, read their returned json object into the list, and return it
                         using (var reader = cmd.ExecuteReader())
-                            while (reader.Read())
-                                columnResults.Add(JsonConvert.DeserializeObject<dynamic>(reader.GetString(0)));
+                            columnResults = read<T>(reader);
                     }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(
+                        $"CAUGHT ERR - Could not retrieve records for query {prepQuery.query} with parameter count {prepQuery.parameters.Length} ExceptionMessage: {ex.Message}");
+                    conn.Close();
+                    return null;
+                }
+                conn.Close();
             }
-            catch (Exception ex)
+
+            //return found objects
+            return columnResults;
+        }
+
+        public static async Task<List<List<T>>> getAll<T>(PgTran tran)
+        {
+            var start = DateTime.Now;
+            var columnResults = new List<List<T>>();
+            //get secret info if not already generated
+            if (secret == null && await warmConnection() == false) { return null; }
+            using (var conn = new NpgsqlConnection(secret.generateConnectionString(1)))
             {
-                Logger.write($"CAUGHT ERR - Could not retrieve records for query {query} with parameter count {parameters.Length} ExceptionMessage: {ex.Message}");
-                return null;
+                try
+                {
+                    //Console.WriteLine("about to open connection");
+                    conn.Open();
+                    //conn.TypeMapper.UseJsonNet();
+                    //Console.WriteLine("opened the connection");
+                    //once connected to the database, get all the tenants
+                    using (var cmd = new NpgsqlCommand(tran.buildQuery(), conn))
+                    {
+                        foreach (var p in tran.parameters)
+                            cmd.Parameters.Add(p);
+                        cmd.Prepare();
+                        //go through all records, read their returned json object into the list, and return it
+                        using (var reader = cmd.ExecuteReader())
+                            do
+                            {
+                                columnResults.Add(read<T>(reader));
+                            } while (reader.NextResult());
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(
+                        $"CAUGHT ERR - Could not retrieve records for query {tran.buildQuery()} with parameter count {tran.parameters.Length} ExceptionMessage: {ex.Message}");
+                    conn.Close();
+                    var end1 = DateTime.Now;
+                    Console.WriteLine($"Failed Query Duration: {(end1 - start).TotalMilliseconds}");
+                    return null;
+                }
+
+                conn.Close();
+                var end = DateTime.Now;
+                Console.WriteLine($"Query Duration: {(end - start).TotalMilliseconds}");
             }
             //return found objects
             return columnResults;
         }
 
-        public static async Task<bool> warmConnection()
+        private static List<T> read<T>(NpgsqlDataReader reader)
+        {
+            var results = new List<T>();
+            while (reader.Read())
+            {
+                if (reader[0] == DBNull.Value) { continue; }
+                //when object returned by function is string, serialize it to given type, otherwise attempt to add it to the return results as is
+                var valueAtZero = reader.GetValue(0);
+                if (valueAtZero is string)
+                    results.Add(JsonConvert.DeserializeObject<T>((string)valueAtZero));
+                else
+                    results.Add((T)valueAtZero);
+            }
+            return results;
+        }
+
+        public static async Task<bool> warmConnection(int poolMinimum = 1)
         {
             if (secret == null)
             {
                 var newSecret = new PostgresSecret();
                 if (await newSecret.retrieve() == false)
                 {
+                    Console.WriteLine("Failed to retrieve secret");
                     return false;
                 }
                 secret = newSecret;
             }
+            //var connStr = secret.generateConnectionString(poolMinimum);
+            //conn = new NpgsqlConnection(connStr);
+            //Console.WriteLine($"Connection Created with Pool Minimum of {poolMinimum}");
+            //Console.WriteLine("Connection Full State: " + conn.FullState);
             return true;
         }
+    }
+
+    public class PgQuery
+    {
+        public string query;
+        public NpgsqlParameter[] parameters;
+
+        public PgQuery(string givenQuery)
+        {
+            query = givenQuery;
+            parameters = new NpgsqlParameter[] { };
+        }
+
+        public PgQuery(string givenQuery, params NpgsqlParameter[] givenParameters)
+        {
+            query = givenQuery;
+            parameters = givenParameters;
+        }
+
+    }
+    public class PgTran
+    {
+        public List<string> queries;
+        public NpgsqlParameter[] parameters;
+
+        public PgTran()
+        {
+            queries = new List<string>();
+            parameters = new NpgsqlParameter[] { };
+        }
+
+        public string buildQuery()
+        {
+            return String.Join(";", queries);
+        }
+
+        public void setParams(params NpgsqlParameter[] newParams)
+        {
+            parameters = newParams;
+        }
+
+        public void setQueries(params string[] newQueries)
+        {
+            queries = new List<string>(newQueries);
+        }
+
     }
 
     class PostgresSecret
@@ -118,9 +235,9 @@ namespace fundercore.Framework
             return true;
         }
 
-        public string generateConnectionString()
+        public string generateConnectionString(int minPool = 1)
         {
-            return $"Host={host};Username={username};Password='{password}';Database={database};SSLMode='Prefer'";
+            return $"Host={host};Username={username};Password='{password}';Database={database};SSLMode='Prefer';MinPoolSize={minPool}";
         }
     }
 }

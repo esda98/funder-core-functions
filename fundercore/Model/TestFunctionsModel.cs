@@ -13,7 +13,7 @@ namespace fundercore.Model
     {
         public static async Task<List<dynamic>> getTestStrings() {
             Logger.write("retrieving data");
-            var results = await Postgres.getAllRecordsFromColumnZero(Queries.GET_TEST_STRINGS, new NpgsqlParameter[] {});
+            var results = await Postgres.getAll<dynamic>(new PgQuery(Queries.GET_TEST_STRINGS));
             Logger.write("retrieved data");
             return results;
         }

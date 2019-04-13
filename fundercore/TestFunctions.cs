@@ -7,13 +7,14 @@ using Microsoft.Azure.WebJobs.Host;
 using System.Threading.Tasks;
 using fundercore.Model;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 
 namespace fundercore
 {
     public static class TestFunctions
     {
         [FunctionName("testPGRetrieve")]
-        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function,"post", Route = null)]HttpRequest req, TraceWriter log)
+        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function,"post", Route = null)]HttpRequest req, ILogger log)
         {
             Logger.initialize(log);
             Logger.write("Entered function");
