@@ -4,10 +4,10 @@ using System.Text;
 
 namespace fundercore.Data {
     class Result {
-        public bool status;
+        public bool success;
         public string message;
         public Result(bool givenStatus, string givenMessage) {
-            status = givenStatus;
+            success = givenStatus;
             message = givenMessage;
         }
     }

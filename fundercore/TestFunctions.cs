@@ -9,13 +9,10 @@ using fundercore.Model;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
 
-namespace fundercore
-{
-    public static class TestFunctions
-    {
+namespace fundercore {
+    public static class TestFunctions {
         [FunctionName("testPGRetrieve")]
-        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function,"post", Route = null)]HttpRequest req, ILogger log)
-        {
+        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, ILogger log) {
             Logger.initialize(log);
             Logger.write("Entered function");
             var results = await TestFunctionsModel.getTestStrings();

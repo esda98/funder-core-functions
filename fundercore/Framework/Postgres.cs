@@ -7,27 +7,21 @@ using Microsoft.Azure.Services.AppAuthentication;
 using fundercore.Data;
 using Npgsql;
 
-namespace fundercore.Framework
-{
-    public static class Postgres
-    {
+namespace fundercore.Framework {
+    public static class Postgres {
         private static PostgresSecret secret;
 
-        public static async Task<List<T>> getAll<T>(PgQuery prepQuery)
-        {
+        public static async Task<List<T>> getAll<T>(PgQuery prepQuery) {
             var columnResults = new List<T>();
             //get secret info if not already generated
             if (secret == null && await warmConnection() == false) { return null; }
-            using (var conn = new NpgsqlConnection(secret.generateConnectionString(1)))
-            {
-                try
-                {
+            using (var conn = new NpgsqlConnection(secret.generateConnectionString(1))) {
+                try {
                     //Console.WriteLine("about to open connection");
                     conn.Open();
                     //conn.TypeMapper.UseJsonNet();
                     //Console.WriteLine("opened the connection");
-                    using (var cmd = new NpgsqlCommand(prepQuery.query, conn))
-                    {
+                    using (var cmd = new NpgsqlCommand(prepQuery.query, conn)) {
                         foreach (var p in prepQuery.parameters)
                             cmd.Parameters.Add(p);
                         cmd.Prepare();
@@ -35,9 +29,7 @@ namespace fundercore.Framework
                         using (var reader = cmd.ExecuteReader())
                             columnResults = read<T>(reader);
                     }
-                }
-                catch (Exception ex)
-                {
+                } catch (Exception ex) {
                     Console.WriteLine(
                         $"CAUGHT ERR - Could not retrieve records for query {prepQuery.query} with parameter count {prepQuery.parameters.Length} ExceptionMessage: {ex.Message}");
                     conn.Close();
@@ -50,36 +42,29 @@ namespace fundercore.Framework
             return columnResults;
         }
 
-        public static async Task<List<List<T>>> getAll<T>(PgTran tran)
-        {
+        public static async Task<List<List<T>>> getAll<T>(PgTran tran) {
             var start = DateTime.Now;
             var columnResults = new List<List<T>>();
             //get secret info if not already generated
             if (secret == null && await warmConnection() == false) { return null; }
-            using (var conn = new NpgsqlConnection(secret.generateConnectionString(1)))
-            {
-                try
-                {
+            using (var conn = new NpgsqlConnection(secret.generateConnectionString(1))) {
+                try {
                     //Console.WriteLine("about to open connection");
                     conn.Open();
                     //conn.TypeMapper.UseJsonNet();
                     //Console.WriteLine("opened the connection");
                     //once connected to the database, get all the tenants
-                    using (var cmd = new NpgsqlCommand(tran.buildQuery(), conn))
-                    {
+                    using (var cmd = new NpgsqlCommand(tran.buildQuery(), conn)) {
                         foreach (var p in tran.parameters)
                             cmd.Parameters.Add(p);
                         cmd.Prepare();
                         //go through all records, read their returned json object into the list, and return it
                         using (var reader = cmd.ExecuteReader())
-                            do
-                            {
+                            do {
                                 columnResults.Add(read<T>(reader));
                             } while (reader.NextResult());
                     }
-                }
-                catch (Exception ex)
-                {
+                } catch (Exception ex) {
                     Console.WriteLine(
                         $"CAUGHT ERR - Could not retrieve records for query {tran.buildQuery()} with parameter count {tran.parameters.Length} ExceptionMessage: {ex.Message}");
                     conn.Close();
@@ -96,11 +81,9 @@ namespace fundercore.Framework
             return columnResults;
         }
 
-        private static List<T> read<T>(NpgsqlDataReader reader)
-        {
+        private static List<T> read<T>(NpgsqlDataReader reader) {
             var results = new List<T>();
-            while (reader.Read())
-            {
+            while (reader.Read()) {
                 if (reader[0] == DBNull.Value) { continue; }
                 //when object returned by function is string, serialize it to given type, otherwise attempt to add it to the return results as is
                 var valueAtZero = reader.GetValue(0);
@@ -112,13 +95,10 @@ namespace fundercore.Framework
             return results;
         }
 
-        public static async Task<bool> warmConnection(int poolMinimum = 1)
-        {
-            if (secret == null)
-            {
+        public static async Task<bool> warmConnection(int poolMinimum = 1) {
+            if (secret == null) {
                 var newSecret = new PostgresSecret();
-                if (await newSecret.retrieve() == false)
-                {
+                if (await newSecret.retrieve() == false) {
                     Console.WriteLine("Failed to retrieve secret");
                     return false;
                 }
@@ -132,58 +112,48 @@ namespace fundercore.Framework
         }
     }
 
-    public class PgQuery
-    {
+    public class PgQuery {
         public string query;
         public NpgsqlParameter[] parameters;
 
-        public PgQuery(string givenQuery)
-        {
+        public PgQuery(string givenQuery) {
             query = givenQuery;
             parameters = new NpgsqlParameter[] { };
         }
 
-        public PgQuery(string givenQuery, params NpgsqlParameter[] givenParameters)
-        {
+        public PgQuery(string givenQuery, params NpgsqlParameter[] givenParameters) {
             query = givenQuery;
             parameters = givenParameters;
         }
 
     }
-    public class PgTran
-    {
+    public class PgTran {
         public List<string> queries;
         public NpgsqlParameter[] parameters;
 
-        public PgTran()
-        {
+        public PgTran() {
             queries = new List<string>();
             parameters = new NpgsqlParameter[] { };
         }
 
-        public string buildQuery()
-        {
+        public string buildQuery() {
             return String.Join(";", queries);
         }
 
-        public void setParams(params NpgsqlParameter[] newParams)
-        {
+        public void setParams(params NpgsqlParameter[] newParams) {
             parameters = newParams;
         }
 
-        public void setQueries(params string[] newQueries)
-        {
+        public void setQueries(params string[] newQueries) {
             queries = new List<string>(newQueries);
         }
 
     }
 
-    class PostgresSecret
-    {
+    class PostgresSecret {
         private string host, username, password, database;
 
-        public async Task<bool> retrieve()
-        {
+        public async Task<bool> retrieve() {
             var azureServiceTokenProvider = new AzureServiceTokenProvider();
             var keyVaultClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(azureServiceTokenProvider.KeyVaultTokenCallback));
             try {
@@ -203,27 +173,22 @@ namespace fundercore.Framework
             return true;
         }
 
-        public bool isValid()
-        {
+        public bool isValid() {
             Logger.write($"checking if is valid: {host},{username},{password},{database}");
             //ensure values are valid
-            if (host == null || host.Trim() == "")
-            {
+            if (host == null || host.Trim() == "") {
                 return false;
             }
 
-            if (username == null || username.Trim() == "")
-            {
+            if (username == null || username.Trim() == "") {
                 return false;
             }
 
-            if (password == null || password.Trim() == "")
-            {
+            if (password == null || password.Trim() == "") {
                 return false;
             }
 
-            if (database == null || database.Trim() == "")
-            {
+            if (database == null || database.Trim() == "") {
                 return false;
             }
 
@@ -235,8 +200,7 @@ namespace fundercore.Framework
             return true;
         }
 
-        public string generateConnectionString(int minPool = 1)
-        {
+        public string generateConnectionString(int minPool = 1) {
             return $"Host={host};Username={username};Password='{password}';Database={database};SSLMode='Prefer';MinPoolSize={minPool}";
         }
     }
