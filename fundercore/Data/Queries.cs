@@ -13,5 +13,9 @@ namespace fundercore.Data
         public const string ADD_ITEM = "SELECT core.fx_add_item(@id, @acctId, @name, @price, @quantity);";
         public const string GET_ITEMS_FUNDRAISERS = "SELECT core.fx_get_items_fundraisers(@acctId, @itemId)";
         public const string GET_FUNDRAISER_ITEMS = "SELECT core.fx_get_fundraiser_items(@acctId, @fundId)";
+        public const string EDIT_FUNDRAISER = "SELECT core.fx_edit_fundraiser(@fund)";
+        public const string EDIT_ITEM = "SELECT core.fx_edit_item(@item)";
+        public const string SET_FUNDRAISER_ITEMS = "SELECT core.fx_set_fundraiser_items(@fundId, @itemIds)";
+        public const string SET_ITEM_FUNDRAISERS = "SELECT core.fx_set_item_fundraisers(@itemId, @fundIds)";
     }
 }

@@ -86,7 +86,50 @@ namespace fundercore {
             return new OkObjectResult(result);
         }
 
+        [FunctionName("EditFundraiser")]
+        public static async Task<IActionResult> EditFundraiser([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, ILogger log) {
+            Logger.initialize(log);
+            Logger.write("Entered function");
 
+            Fundraiser fund;
+            try {
+                var bodyString = await req.ReadAsStringAsync();
+                fund = JsonConvert.DeserializeObject<Fundraiser>(bodyString, new IsoDateTimeConverter() { DateTimeFormat = "yyyy-MM-dd" });
+            } catch (Exception ex) {
+                Logger.write($"Invalid Edit given exception: {ex.Message} with stack trace: {ex.StackTrace}");
+                return new BadRequestObjectResult("Invalid Input for Fundraiser");
+            }
+            if (fund == null || !fund.validBeforeAdd()) {
+                return new BadRequestObjectResult("Invalid Input for Fundraiser");
+            }
+
+            var result = await FundraiserFunctionsModel.editFundraiser(fund);
+            return new OkObjectResult(result);
+        }
+
+        [FunctionName("SetFundraiserItems")]
+        public static async Task<IActionResult> SetFundraiserItems([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, ILogger log) {
+            Logger.initialize(log);
+            Logger.write("Entered function");
+
+            FundraiserItems fundItems;
+            try {
+                //force both properties to be present or error
+                JsonSerializerSettings settings = new JsonSerializerSettings();
+                settings.MissingMemberHandling = MissingMemberHandling.Error;
+                var bodyString = await req.ReadAsStringAsync();
+                fundItems = JsonConvert.DeserializeObject<FundraiserItems>(bodyString, settings);
+            } catch (Exception ex) {
+                Logger.write($"Invalid Edit given exception: {ex.Message} with stack trace: {ex.StackTrace}");
+                return new BadRequestObjectResult("Invalid Input for Fundraiser Items");
+            }
+            if (fundItems == null || !fundItems.valid()) {
+                return new BadRequestObjectResult("Invalid Input for Fundraiser");
+            }
+
+            var result = await FundraiserFunctionsModel.setFundraiserItems(fundItems);
+            return new OkObjectResult(result);
+        }
 
     }
 }

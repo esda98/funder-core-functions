@@ -49,6 +49,27 @@ namespace fundercore.Model {
             }
         }
 
+        public static async Task<Result> updateItem(Item item) {
+            var editResult = await Postgres.getAll<Result>(new PgQuery(Queries.EDIT_ITEM,
+                new NpgsqlParameter("@item", NpgsqlDbType.Json) { Value = JsonConvert.DeserializeObject(JsonConvert.SerializeObject(item)) }));
+            if (editResult == null || editResult.Count != 1) {
+                return new Result(false, "Failed to access the database");
+            } else {
+                return editResult[0];
+            }
+        }
+
+        public static async Task<Result> setItemFundraisers(ItemFundraisers itemFunds) {
+            var setResult = await Postgres.getAll<Result>(new PgQuery(Queries.SET_ITEM_FUNDRAISERS,
+                new NpgsqlParameter("@itemId", itemFunds.itemId), new NpgsqlParameter("@fundIds", itemFunds.fundIds)));
+            if (setResult == null || setResult.Count != 1) {
+                return new Result(false, "Failed to access the database");
+            } else {
+                return setResult[0];
+            }
+        }
+
+
 
     }
 }

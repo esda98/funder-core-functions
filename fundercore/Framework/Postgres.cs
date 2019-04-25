@@ -19,7 +19,7 @@ namespace fundercore.Framework {
                 try {
                     //Console.WriteLine("about to open connection");
                     conn.Open();
-                    //conn.TypeMapper.UseJsonNet();
+                    conn.TypeMapper.UseJsonNet();
                     //Console.WriteLine("opened the connection");
                     using (var cmd = new NpgsqlCommand(prepQuery.query, conn)) {
                         foreach (var p in prepQuery.parameters)
