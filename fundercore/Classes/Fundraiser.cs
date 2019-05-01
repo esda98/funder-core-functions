@@ -43,4 +43,8 @@ namespace fundercore.Classes {
         [JsonProperty("is_tied")]
         public bool isTied;
     }
+
+    class FundraiserWithItems : Fundraiser {
+        public TiedItem[] items;
+    }
 }

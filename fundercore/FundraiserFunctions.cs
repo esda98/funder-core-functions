@@ -19,10 +19,10 @@ namespace fundercore {
             Logger.initialize(log);
             Logger.write("Entered function");
 
-            Fundraiser fund;
+            FundraiserWithItems fund;
             try {
                 var bodyString = await req.ReadAsStringAsync();
-                fund = JsonConvert.DeserializeObject<Fundraiser>(bodyString, new IsoDateTimeConverter() { DateTimeFormat = "yyyy-MM-dd" });
+                fund = JsonConvert.DeserializeObject<FundraiserWithItems>(bodyString, new IsoDateTimeConverter() { DateTimeFormat = "yyyy-MM-dd" });
             } catch (Exception ex) {
                 Logger.write($"Invalid Add given exception: {ex.Message} with stack trace: {ex.StackTrace}");
                 return new BadRequestObjectResult("Invalid Input for Fundraiser");
@@ -91,10 +91,10 @@ namespace fundercore {
             Logger.initialize(log);
             Logger.write("Entered function");
 
-            Fundraiser fund;
+            FundraiserWithItems fund;
             try {
                 var bodyString = await req.ReadAsStringAsync();
-                fund = JsonConvert.DeserializeObject<Fundraiser>(bodyString, new IsoDateTimeConverter() { DateTimeFormat = "yyyy-MM-dd" });
+                fund = JsonConvert.DeserializeObject<FundraiserWithItems>(bodyString, new IsoDateTimeConverter() { DateTimeFormat = "yyyy-MM-dd" });
             } catch (Exception ex) {
                 Logger.write($"Invalid Edit given exception: {ex.Message} with stack trace: {ex.StackTrace}");
                 return new BadRequestObjectResult("Invalid Input for Fundraiser");

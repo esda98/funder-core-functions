@@ -11,7 +11,7 @@ using NpgsqlTypes;
 
 namespace fundercore.Model {
     static class FundraiserFunctionsModel {
-        public static async Task<Result> addFundraiser(Fundraiser fund) {
+        public static async Task<Result> addFundraiser(FundraiserWithItems fund) {
             //generate a new id for this fundraiser
             fund.generateId();
             Logger.write("New Fundraiser: " + JsonConvert.SerializeObject(fund));
@@ -22,11 +22,20 @@ namespace fundercore.Model {
 
             Logger.write("Result: " + JsonConvert.SerializeObject(addResult));
             //ensure valid response was returned
-            if (addResult == null || addResult.Count != 1) {
+            if (addResult == null || addResult.Count != 1 || addResult[0].success == false) {
                 return new Result(false, "Unable to create fundraiser");
-            } else {
-                return addResult[0];
             }
+
+            //add the items to this fundraiser
+            var fundItems = new FundraiserItems { fundId = fund.id };
+            var itemIds = new List<Guid>();
+            foreach (var i in fund.items) {
+                if (i.isTied) {
+                    itemIds.Add(i.id);
+                }
+            }
+            fundItems.itemIds = itemIds.ToArray();
+            return await setFundraiserItems(fundItems);           
         }
 
         public static async Task<Result> getFundraisers(Guid accountId) {
@@ -47,14 +56,22 @@ namespace fundercore.Model {
             }
         }
 
-        public static async Task<Result> editFundraiser(Fundraiser fund) {
+        public static async Task<Result> editFundraiser(FundraiserWithItems fund) {
             var editResult = await Postgres.getAll<Result>(new PgQuery(Queries.EDIT_FUNDRAISER,
                 new NpgsqlParameter("@fund", NpgsqlDbType.Json) { Value = JsonConvert.DeserializeObject(JsonConvert.SerializeObject(fund)) }));
-            if (editResult == null || editResult.Count != 1) {
+            if (editResult == null || editResult.Count != 1 || editResult[0].success == false) {
                 return new Result(false, "Failed to access database");
-            } else {
-                return editResult[0];
             }
+            //set the items to this fundraiser
+            var fundItems = new FundraiserItems { fundId = fund.id };
+            var itemIds = new List<Guid>();
+            foreach (var i in fund.items) {
+                if (i.isTied) {
+                    itemIds.Add(i.id);
+                }
+            }
+            fundItems.itemIds = itemIds.ToArray();
+            return await setFundraiserItems(fundItems);
         }
 
         public static async Task<Result> setFundraiserItems(FundraiserItems fundItems) {
