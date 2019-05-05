@@ -21,5 +21,6 @@ namespace fundercore.Data
         public const string ADD_WITHDRAWAL = "SELECT core.fx_add_withdrawal(@id, @itemId, @sellerId, @price, @time, @handler, @quantity);";
         public const string GET_WITHDRAWALS = "SELECT core.fx_get_withdrawals(@acctId)";
         public const string ADD_PAYMENT = "SELECT core.fx_add_payment(@id, @wiId, @payType, @amt, @time, @handler);";
+        public const string DELETE_ITEM = "SELECT core.fx_delete_item(@itemId)";
     }
 }

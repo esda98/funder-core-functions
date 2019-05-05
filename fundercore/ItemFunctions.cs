@@ -132,5 +132,28 @@ namespace fundercore {
         }
 
 
+        [FunctionName("DeleteItem")]
+        public static async Task<IActionResult> DeleteItem([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]HttpRequest req, ILogger log) {
+            Logger.initialize(log);
+            Logger.write("Entered function");
+
+            Item item;
+            try {
+                var bodyString = await req.ReadAsStringAsync();
+                item = JsonConvert.DeserializeObject<Item>(bodyString);
+            } catch (Exception ex) {
+                Logger.write($"Invalid Add given exception: {ex.Message} with stack trace: {ex.StackTrace}");
+                return new BadRequestObjectResult("Invalid Input for Item");
+            }
+            //ensure a valid item was given and parsed out
+            if (item == null || item.id == Guid.Empty) {
+                return new BadRequestObjectResult("Invalid Input for Item");
+            }
+
+            var result = await ItemFunctionsModel.delete(item);
+            return new OkObjectResult(result);
+        }
+
+
     }
 }

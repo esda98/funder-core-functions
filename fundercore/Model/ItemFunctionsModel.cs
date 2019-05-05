@@ -69,6 +69,14 @@ namespace fundercore.Model {
             }
         }
 
+        public static async Task<Result> delete(Item item) {
+            var deleteResult = await Postgres.getAll<Result>(new PgQuery(Queries.DELETE_ITEM, new NpgsqlParameter("@itemId", item.id)));
+            if (deleteResult == null || deleteResult.Count != 1) {
+                return new Result(false, "Failed to access the database");
+            } else {
+                return deleteResult[0];
+            }
+        }
 
 
     }
